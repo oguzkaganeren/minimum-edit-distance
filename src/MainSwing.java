@@ -27,7 +27,7 @@ public class MainSwing extends JFrame {
 
 	private JPanel contentPane;
 	private static ArrayList<String> dictionary;
-	private static HashMap<Integer, String> listOfSimilarity=new HashMap<>();
+	private static HashMap<String, Integer> listOfSimilarity=new HashMap<>();
 	private static final int ITEMCOUNT=10;//count of showing item on list
 	private JTextField textField;
 	private JList<String> list;
@@ -50,41 +50,44 @@ public class MainSwing extends JFrame {
 		});
 	}
 
-	static int min(int x, int y, int z) {
-		if (x <= y && x <= z)
-			return x;
-		if (y <= x && y <= z)
-			return y;
-		else
-			return z;
+	//return us minimum value
+	public static int minimum(int a, int b, int c)
+	{
+		return Integer.min(a, Integer.min(b, c));
 	}
+	//inspired by https://www.techiedelight.com/levenshtein-distance-edit-distance-problem/
+	public static int editDist(String word, String string,int sizeOfWord, int sizeOfString)
+	{
+		//create a matrix
+		int[][] matrix = new int[sizeOfWord + 1][sizeOfString + 1];
+		for (int i = 1; i <= sizeOfWord; i++)
+			matrix[i][0] = i;				// add numbers for word to matrix
 
-	// inspired by https://www.geeksforgeeks.org/edit-distance-dp-5/
-	static int editDist(String str1, String str2, int m, int n) {
-		// If first string is empty, the only option is to
-		// insert all characters of second string into first
-		if (m == 0)
-			return n;
+		for (int j = 1; j <= sizeOfString; j++)
+			matrix[0][j] = j;				// add numbers for string to matrix
 
-		// If second string is empty, the only option is to
-		// remove all characters of first string
-		if (n == 0)
-			return m;
+		//we made the matrix
+		int cost;
 
-		// If last characters of two strings are same, nothing
-		// much to do. Ignore last characters and get count for
-		// remaining strings.
-		if (str1.charAt(m - 1) == str2.charAt(n - 1))
-			return editDist(str1, str2, m - 1, n - 1);
-
-		// If last characters are not same, consider all three
-		// operations on last character of first string, recursively
-		// compute minimum cost for all three operations and take
-		// minimum of three values.
-		return 1 + min(editDist(str1, str2, m, n - 1), // Insert
-				editDist(str1, str2, m - 1, n), // Remove
-				editDist(str1, str2, m - 1, n - 1) // Replace
-		);
+		// start to fill the matrix
+		for (int i = 1; i <= sizeOfWord; i++)
+		{
+			for (int j = 1; j <= sizeOfString; j++)
+			{
+				if (word.charAt(i-1) == string.charAt(j-1))		
+					cost = 0;//its same character, so cost is 0		
+				else
+					cost = 1;//not same character			
+				//matrix'i üstten başlayarak gittiğimizi düşündüğümüzde
+				//sol üst, sol ve üst kısmında kalan cost değerlerinin min. değere sahip
+				//değeri yeni eleman olarak matrixe ekliyoruz
+				matrix[i][j] = minimum(matrix[i - 1][j] + 1,	// deletion
+						matrix[i][j - 1] + 1,			// insertion
+						matrix[i - 1][j - 1] + cost);	// replace
+			}
+		}
+		//köşedeki sayıyı geri döndürüyoruz
+		return matrix[sizeOfWord][sizeOfString];
 	}
 
 	// readFile function helps to read txt file
@@ -152,29 +155,27 @@ public class MainSwing extends JFrame {
 					for (String string : dictionary) {
 						int distance = editDist(word, string, word.length(), string.length());
 						if(listOfSimilarity.size()<=ITEMCOUNT) {
-							listOfSimilarity.put(distance, string);
+							listOfSimilarity.put(string, distance);
 						}else {
-							int tempKey=-1;
-							for (Map.Entry<Integer, String> entry : listOfSimilarity.entrySet()) {
-								if(entry.getKey()>distance) {
+							String tempKey="";
+							for (Map.Entry<String, Integer> entry : listOfSimilarity.entrySet()) {
+								if(distance<entry.getValue()) {
 									//if there is a bigger distance in hashmap, we will remove it
 									//and add new smaller one.
 									tempKey=entry.getKey();
-									break;
 								}
 							}
-							if(tempKey!=-1) {
+							if(tempKey.length()>0) {
 								listOfSimilarity.remove(tempKey);
-								listOfSimilarity.put(distance, string);
+								listOfSimilarity.put(string, distance);
 							}
 							
 						}
 					}
 
 					DefaultListModel<String> listModel = new DefaultListModel<String>();
-					for (Map.Entry<Integer, String> entry : listOfSimilarity.entrySet()) {
-						listModel.addElement(entry.getValue()+"-"+entry.getKey());
-						System.out.println("here");
+					for (Map.Entry<String, Integer> entry : listOfSimilarity.entrySet()) {
+						listModel.addElement(entry.getKey()+"-"+entry.getValue());
 					}
 					
 					list.setModel(listModel);
